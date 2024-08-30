@@ -11,8 +11,7 @@ This repository contains the code and instructions for training a YOLOv10 model 
 4. [Training the Model](#training-the-model)
 5. [Inference](#inference)
 6. [Results](#results)
-7. [Conclusion](#conclusion)
-8. [License](#license)
+
 
 ## Introduction
 This project aims to detect three classes in images:
