@@ -15,7 +15,7 @@ This repository contains the code and instructions for training a YOLOv10 model 
 6. [Scripts](#scripts)
 7. [Results](#results)
 8. [Conclusion](#conclusion)
-9. [License](#license)
+
 
 ## Introduction
 This project aims to detect three classes in images:
@@ -227,11 +227,4 @@ The model's performance metrics such as Precision, Recall, and mAP50 are logged 
 ## Conclusion
 The trained YOLOv10 model successfully detects the presence and correctness of face masks. Further improvements could involve fine-tuning the model or increasing the dataset size.
 
-## License
-This project is licensed under the
 
- MIT License. See the [LICENSE](LICENSE) file for more details.
-
----
-
-This README now accurately reflects the code provided in your PDF, ensuring that all steps for preparing the dataset, training the model, running predictions, and using the provided scripts are clearly documented.
