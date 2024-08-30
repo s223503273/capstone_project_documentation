@@ -1,115 +1,103 @@
-import cv2
-import numpy as np
-import pandas as pd
-import os
-import exifread
-import glob
 
-# Define categories
-ages = ['0-18', '19-30', '31-50', '51+']
-genders = ['Male', 'Female']
-hair_colors = ['Black', 'Brown', 'Blonde', 'Red', 'Gray']
-mask_types = ['No Mask', 'Surgical Mask', 'N95 Mask']
 
-# Create a pandas dataframe to store the dataset
-df = pd.DataFrame(columns=['Image Path', 'Age', 'Gender', 'Hair Color', 'Mask', 'Image Make', 'Image Model', 'EXIF DateTimeOriginal', 'EXIF ExifImageWidth', 'EXIF ExifImageLength', 'Location'])
+# YOLOv10 Face Mask Detection
 
-# Function to extract features from an image
-def extract_features(image_path):
-    try:
-        image = cv2.imread(image_path)
-        if image is None:
-            print(f"Error reading image: {image_path}")
-            return None
-        
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        
-        face_cascade = cv2.CascadeClassifier(os.path.join(os.getcwd(), 'haarcascade_frontalface_default.xml'))
-        if face_cascade.empty():
-            print(f"Error loading Haar cascade file for image: {image_path}")
-            return None
-        
-        faces = face_cascade.detectMultiScale(gray)
-        if len(faces) == 0:
-            print(f"No faces detected in: {image_path}")
-            return None
-        
-        # Age
-        age = ages[np.random.randint(0, len(ages))]  # Random age for demonstration
-        
-        # Gender
-        gender = genders[np.random.randint(0, len(genders))]  # Random gender for demonstration
-        
-        # Hair Color
-        hair_color = hair_colors[np.random.randint(0, len(hair_colors))]  # Random hair color for demonstration
-        
-        # Mask
-        mask = mask_types[np.random.randint(0, len(mask_types))]  # Random mask type for demonstration
-        
-        return {
-            'Image Path': image_path,
-            'Age': age,
-            'Gender': gender,
-            'Hair Color': hair_color,
-            'Mask': mask
-        }
-    
-    except cv2.error as e:
-        print(f"OpenCV error processing {image_path}: {e}")
-        return None
-    except Exception as e:
-        print(f"Error processing {image_path}: {e}")
-        return None
+This repository contains the code and instructions for training a YOLOv10 model to detect whether people are wearing face masks correctly, incorrectly, or not at all. The project uses the "Face Mask Detection" dataset.
 
-# Function to get all image file paths in the given folder
-def get_image_paths(folder):
-    image_paths = glob.glob(folder + "/*.jpg") + glob.glob(folder + "/*.png")
-    print(f"Found {len(image_paths)} images")  # Debugging statement
-    return image_paths
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Environment Setup](#environment-setup)
+3. [Dataset Preparation](#dataset-preparation)
+4. [Training the Model](#training-the-model)
+5. [Inference](#inference)
+6. [Results](#results)
+7. [Conclusion](#conclusion)
+8. [License](#license)
 
-# List to store metadata dictionaries for each image
-metadata_list = []
+## Introduction
+This project aims to detect three classes in images:
+- `with_mask`
+- `without_mask`
+- `mask_weared_incorrect`
 
-# Specify the columns you want to extract
-desired_columns = [
-    'Image Make', 'Image Model', 'EXIF DateTimeOriginal', 'EXIF ExifImageWidth', 'EXIF ExifImageLength'
-]
+The model is based on YOLOv10, a state-of-the-art object detection algorithm.
 
-# Specify the folder containing the images
-folder_path = r'C:/Users/vaibh/OneDrive/Desktop/metadata_extraction_dataset'
+## Environment Setup
+To replicate this project, you'll need to install the required packages and set up the environment.
 
-# Iterate through each image file in the folder
-for img_path in get_image_paths(folder_path):
-    print(f"Processing image: {img_path}")  # Debugging statement
-    features = extract_features(img_path)
-    if features is not None:
-        with open(img_path, 'rb') as image_file:
-            # Return Exif tags
-            tags = exifread.process_file(image_file)
-        
-        # Create a dictionary to store the selected metadata
-        info_dict = features
-        
-        for tag in desired_columns:
-            if tag in tags:
-                info_dict[tag] = str(tags[tag])
-                print(f"Found {tag}: {tags[tag]}")  # Debugging statement
-            else:
-                info_dict[tag] = None  # Fill with None if the tag is not available
-                print(f"{tag} not found")  # Debugging statement
-        
-        # Add location
-        info_dict['Location'] = folder_path
-        
-        # Append the metadata dictionary to the list
-        metadata_list.append(info_dict)
+1. Clone this repository:
+    ```bash
+    git clone https://github.com/yourusername/yolov10-face-mask-detection.git
+    cd yolov10-face-mask-detection
+    ```
 
-# Create a DataFrame from the list of metadata dictionaries
-metadata_df = pd.DataFrame(metadata_list)
+2. Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-# Display the DataFrame to the user
-print(metadata_df)
+3. Download YOLOv10 weights:
+    ```bash
+    mkdir -p weights
+    weights=('yolov10n.pt' 'yolov10s.pt' 'yolov10m.pt' 'yolov10b.pt' 'yolov10x.pt')
+    base_url='https://github.com/THU-MIG/yolov10/releases/download/v1.1/'
+    for weight in "${weights[@]}"; do
+        wget -P weights -q "${base_url}${weight}"
+    done
+    ```
 
-# Save the DataFrame to a CSV file
-csv_filename = 'combined_image_metadata.csv'
-metadata_df.to_csv(csv_filename, index=False)
+## Dataset Preparation
+The dataset needs to be organized into training, validation, and test sets. Here's how to prepare the dataset:
+
+1. **Create the necessary folder structure**:
+    ```python
+    def create_folder_structure(base_path):
+        folders = [
+            'data/train/images', 'data/train/labels',
+            'data/val/images', 'data/val/labels',
+            'data/test/images', 'data/test/labels'
+        ]
+        for folder in folders:
+            os.makedirs(os.path.join(base_path, folder), exist_ok=True)
+    create_folder_structure('path_to_your_project')
+    ```
+
+2. **Convert XML annotations to YOLO format**:
+    ```python
+    def convert_annotation(xml_path, output_path, classes):
+        # Your implementation here
+    ```
+
+3. **Process and split the dataset**:
+    ```python
+    process_dataset('path_to_your_dataset', 'path_to_output')
+    ```
+
+## Training the Model
+Train the YOLOv10 model with the prepared dataset.
+
+```bash
+yolo task=detect mode=train epochs=50 batch=32 plots=True \
+model=weights/yolov10n.pt \
+data=data/data.yaml
+```
+
+Training logs and metrics will be saved in the `runs/detect/train/` directory.
+
+## Inference
+To perform inference on a new image using the trained model:
+
+```python
+from ultralytics import YOLOv10
+import supervision as sv
+
+model = YOLOv10('runs/detect/train/weights/best.pt')
+
+# Load a random image from the test set
+# Perform inference and annotate the image
+```
+
+## Results
+The model's performance metrics such as Precision, Recall, and mAP50 are logged during training. Visual results of the predictions are saved in the `runs/detect/train/` directory.
+
+)
